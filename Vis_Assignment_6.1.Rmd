@@ -1,0 +1,217 @@
+---
+title: "Assignment 6"
+author: "Wanjiku Ngare"
+output: html_document
+---
+```{r setup, include=FALSE}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+```
+
+## Why this map?
+
+Nairobi is a city of ~5 million people, it does not have an adequate public transportation system - namely, a train or metro service. There is a public bus network, but it isn't as robust as the  privately-owned minibuses (~14 passengers) known as matatus. I found matatu transportation route data from project Digital Matatus (http://www.digitalmatatus.com/about.html), which collected, aggregated, and shared it publicly. I've long marveled at how Nairobians navigate such a large, heterogeneous, and distributed system.
+
+```{r, echo=FALSE}
+leaflet_plane <- "+proj=longlat +datum=WGS84"
+
+NairobiMatatuRoutes <- st_read("/Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/GIS_Matatu Line_2019")%>% 
+mutate(MatatuDirection = case_when(
+  direction == "0"~"Inbound to City Center",
+  direction == "1"~"Outbound from City Center"))%>% 
+  
+  mutate(RouteGeography = case_when(
+  route_name == "100"~"Kiambu Rd",
+  route_name == "100A"~"Kiambu Rd",
+  route_name == "120"~"Kiambu Rd",
+  route_name == "121"~"Kiambu Rd",
+  route_name == "71B"~"Thika Rd",
+  route_name =="25"~"Thika Rd",
+  route_name =="25A"~"Thika Rd",
+  route_name =="27"~"Thika Rd",
+  route_name =="29"~"Thika Rd",
+  route_name == "30"~"Thika Rd",
+  route_name == "43"~"Thika Rd",
+  route_name =="44G"~"Thika Rd",
+  route_name =="44Z"~"Thika Rd",
+  route_name =="44K"~"Thika Rd", 
+  route_name == "45G"~"Thika Rd", 
+  route_name =="45K"~"Thika Rd",
+  route_name =="45P"~"Thika Rd",
+  route_name =="49"~"Thika Rd",
+  route_name =="145"~"Thika Rd",
+  route_name == "145D"~"Thika Rd",
+  route_name =="237"~"Thika Rd",
+  route_name =="6"~"Juja Rd",
+  route_name =="14"~"Juja Rd",
+  route_name =="17A"~"Juja Rd",
+  route_name =="17AKY"~"Juja Rd",
+  route_name =="18C"~"Juja Rd",
+  route_name =="32D"~"Juja Rd",
+  route_name =="41"~"Juja Rd",
+  route_name =="46"~"Juja Rd",
+  route_name =="373B"~"Juja Rd",
+  route_name =="10"~"Jogoo Rd",
+  route_name =="23KS"~"Jogoo Rd",
+  route_name =="26"~"Jogoo Rd",
+  route_name =="26S"~"Jogoo Rd",
+  route_name =="36"~"Jogoo Rd",
+  route_name =="58"~"Jogoo Rd",
+  route_name =="35"~"Kangundo Rd",
+  route_name =="60"~"Kangundo Rd.",
+  route_name =="38"~"Kangundo Rd",
+  route_name =="39"~"Kangundo Rd",
+  route_name =="19C2"~"Kangundo Rd",
+  route_name =="19C"~"Kayole",
+  route_name =="34B"~"Kayole",
+  route_name =="1960"~"Kayole",
+  route_name =="1961C"~"Kayole",
+  route_name =="1961CK"~"Kayole",
+  route_name =="33PJ"~"Embakasi",
+  route_name =="33PM"~"Embakasi",
+  route_name =="34J"~"Embakasi",
+  route_name =="70"~"Embakasi",
+  route_name =="71"~"Embakasi",
+  route_name =="12C"~"Mombasa Rd",
+  route_name =="12D"~"Mombasa Rd",
+  route_name =="33B"~"Mombasa Rd",
+  route_name =="33FED"~"Mombasa Rd",
+  route_name =="33H"~"Mombasa Rd",
+  route_name =="33UTW"~"Mombasa Rd",
+  route_name =="110ATH"~"Mombasa Rd",
+  route_name =="110KIT"~"Mombasa Rd",
+  route_name =="14A"~"Langata Rd",
+  route_name =="14B"~"Langata Rd",
+  route_name =="15"~"Langata Rd",
+  route_name =="16"~"Langata Rd",
+  route_name =="34L"~"Langata Rd",
+  route_name =="125"~"Langata Rd",
+  route_name =="126"~"Langata Rd",
+  route_name =="7C"~"Ngong Rd",
+  route_name =="8"~"Ngong Rd",
+  route_name =="24"~"Ngong Rd",
+  route_name =="24C"~"Ngong Rd",
+  route_name =="32A"~"Ngong Rd",
+  route_name =="33NG"~"Ngong Rd",
+  route_name =="111"~"Ngong Rd",
+  route_name =="2"~"Dagoretti Rd",
+  route_name =="4W"~"Dagoretti Rd",
+  route_name =="102"~"Dagoretti Rd",
+  route_name =="5"~"Kodhek Rd",
+  route_name =="46K"~"Kodhek Rd",
+  route_name =="46Y"~"Kodhek Rd",
+  route_name =="46P"~"Kodhek Rd",
+  route_name =="56"~"Kodhek Rd",
+  route_name =="48"~"Kileleshwa",
+  route_name =="48A"~"Kileleshwa",
+  route_name =="48B"~"Kileleshwa",
+  route_name =="48O"~"Kileleshwa",
+  route_name =="48C"~"Kileleshwa",
+  route_name =="22"~"Waikayki Way",
+  route_name =="23"~"Waikayki Way",
+  route_name =="30"~"Waikayki Way",
+  route_name =="105"~"Waikayki Way",
+  route_name =="114W"~"Waikayki Way",
+  route_name =="115"~"Waikayki Way",
+  route_name =="135"~"Waikayki Way",
+  route_name =="118"~"Parklands Rd",
+  route_name =="119"~"Parklands Rd",
+  route_name =="119A"~"Parklands Rd",
+  route_name =="11A"~"Limuru Rd",
+  route_name =="11F"~"Limuru Rd",
+  route_name =="106"~"Limuru Rd",
+  route_name =="107"~"Limuru Rd",
+  route_name =="108"~"Limuru Rd",
+  route_name =="116"~"Limuru Rd",
+  route_name =="1"~"Other",
+  route_name =="6E"~"Other",
+  route_name =="11"~"Other",
+  route_name =="20"~"Other",
+  route_name =="24"~"Other",
+  route_name =="33SB"~"Other",
+  route_name =="39"~"Other",
+  route_name =="42"~"Other",
+  route_name =="48K"~"Other",
+  route_name =="48W"~"Other",
+  route_name =="53"~"Other",
+  route_name =="69"~"Other",
+  route_name =="103"~"Other",
+  route_name =="110AK"~"Other",
+  route_name =="107D"~"Other",
+  route_name =="129"~"Other",
+  route_name =="145B"~"Other",
+  route_name =="239"~"Other",
+  route_name =="405"~"Other"))%>% 
+  select(MatatuDirection, RouteGeography, shape_id, points, trip_id, headsign, route_id, route_name, route_long, geometry)
+```
+
+```{r, echo=FALSE}
+NairobiMatatuRoutes$describe <- 
+  paste("<B>Terminuses:</B>", NairobiMatatuRoutes$route_long, "<br>") %>% 
+  paste("<B>Route name:</B>", NairobiMatatuRoutes$route_name, "<br>") %>% 
+  paste("<B>Direction:</B>", NairobiMatatuRoutes$MatatuDirection, "<br>") %>% 
+  lapply(htmltools::HTML)
+```
+
+# Interactive Map of Matatu Routes in Nairobi, Kenya
+
+Matatus in Nairobi operate on 17 major routes defined by road names or area/neighborhood names.The map below shows approximately 272 different matatu subroutes along the major routes (zoom in to experience each of them!). In total, there are over 4,000 individual stops in Nairobi  and the surrounding area. The major stops are known as 'terminus(es)'. The map below does not show the stops because it would not be the most useful way to display them. However,when you click on a route, you see the major terminuses along the route, the route name, and the direction (Inbound to, or Outbound from the City Center). Digital Matatus has created a beautiful, diagrammatic static  map for riders. If improved upon, this map could be an online, additive interactive tool for riders.   
+
+If I  had more time and wanted to use the interactive map as a way to show the 4000 stops, I would create individual vignettes for each road and set of subroutes. They would fade into the bigger, main map when they aren't relevant to the user's request. I'd also find a cleaner, more clear way to represent the subroutes. Right now, you have to zoom in quite a lot to see and highlight them. Overall, this was a fun project. It allowed me to see and appreciate the complexity in a system I've marginally experienced from a different perspective. Nairobians certainly deserve a more functional and comprehensive public transportation system. But for now, matatus work and they abound.
+```{r, echo=FALSE}
+
+color_bins <- colorFactor(topo.colors(17), NairobiMatatuRoutes$RouteGeography)
+
+NairobiMatatuRoutes_map1 <- leaflet(NairobiMatatuRoutes, options = leafletOptions(minZoom = 10, maxZoom = 20))%>%
+  addProviderTiles(providers$Stamen)%>%
+  
+  addPolylines(data = NairobiMatatuRoutes, stroke = T,
+               color = color_bins(NairobiMatatuRoutes$RouteGeography),
+               opacity = 1,
+               weight = 3,
+               highlightOptions = highlightOptions(color = "red",
+                                                   fillOpacity = 1),
+               popup = ~ describe) %>%
+ 
+  addLegend(pal = color_bins,
+             values = NairobiMatatuRoutes$RouteGeography,
+             title = "Nairobi Matatu Routes",
+            position = "bottomright",
+            opacity = 1) %>%
+
+  addControl("Matatu Routes in Nairobi, Kenya", position = "topright") %>%
+  addControl('<a href="/Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/GIS_Matatu Line_2019">Data source</a>',
+             position = "bottomleft")
+  
+NairobiMatatuRoutes_map1
+```
+
+``````{r}
+saveWidget(NairobiMatatuRoutes_map1, file = "NairobiMatatuRoutes.html")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
