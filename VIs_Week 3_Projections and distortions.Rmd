@@ -1,0 +1,25 @@
+---
+title: "People2"
+author: "Wanjiku Ngare"
+date: "10/16/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+person_vars_2018 <- pums_variables %>%
+  distinct(year, survey, var_code, 
+           var_label, data_type, level) %>%
+  filter(level == "person", year == 2018, survey == "acs1")
+```
+
+person_data2 <- get_pums(variables = c("TEN", 
+                                      "SEX", 
+                                      "PINCP", 
+                                      "WKHP", 
+                                      "JWMNP"),
+                        state = "TX", 
+                        year = 2018, 
+                        survey = "acs1",
+                        recode = TRUE) %>%
+  filter(JWMNP > 0) %>%
+  select(TEN_label, SEX_label, PINCP, WKHP, JWMNP)

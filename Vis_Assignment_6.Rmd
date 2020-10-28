@@ -1,0 +1,141 @@
+---
+title: "Assignment 8"
+author: "Wanjiku Ngare"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+```
+
+```{r, message = FALSE, results='hide'}
+leaflet_plane <- "+proj=longlat +datum=WGS84"
+
+westernKEmarkets <- st_read("/Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/ke_market_centers")
+```
+
+```{r, message = FALSE, results='hide'}
+NairobiMatatuRoutes_map1 <- leaflet(parks) %>%
+  addProviderTiles(providers$Stamen.TonerLite) %>%
+  addPolygons(fillColor = "green", stroke = FALSE) %>%
+  addControl("Matatu Routes in Nairobi, Kenya", position = "topright") %>%
+  addControl('<a href="//Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/GIS_MATATU_DATA_2019">Data source</a>',
+             position = "bottomleft")
+
+NairobiMatatuRoutes_map1
+```
+
+```{r, message = FALSE, results='hide'}
+westernKEmarkets_map2 <- leaflet(parks) %>%
+  addProviderTiles(providers$CartoDB) %>%
+  addPolygons(fillColor = "green", stroke = FALSE,
+              highlightOptions = highlightOptions(fillColor = "darkgreen", 
+                                                  fillOpacity = 1)) %>%
+  addControl("Western Kenya Markets", position = "topright") %>%
+  addControl('<a href="/Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/ke_market_centers">Data source</a>',
+             position = "bottomleft")
+
+westernKEmarkets_map2
+```
+
+```{r, message = FALSE, results='hide'}
+parks$describe <- 
+  paste(parks$name, "<br>", 
+               prettyNum(parks$acres, digits = 2), " acres") %>% 
+  lapply(htmltools::HTML)
+
+westernKEmarkets_map3 <- leaflet(parks) %>%
+  addProviderTiles(providers$CartoDB.Voyager) %>%
+  addPolygons(fillColor = "green", stroke = FALSE,
+              highlightOptions = highlightOptions(fillColor = "darkgreen", 
+                                                  fillOpacity = 1),
+              label = ~describe) %>%
+  addControl("PWestern Kenya Markets", position = "topright") %>%
+  addControl('<a href="/Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/ke_market_centers">Data source</a>',
+             position = "bottomleft")
+
+westernKEmarkets_map3
+```
+
+
+```{r, message = FALSE, results='hide'}
+westernKEmarkets_map4 <- leaflet(parks) %>%
+  addProviderTiles(providers$Stamen.Watercolor) %>%
+  addPolygons(fillColor = "green", stroke = FALSE,
+              highlightOptions = highlightOptions(fillColor = "darkgreen", 
+                                                  fillOpacity = 1),
+              popup = ~describe) %>%
+  addControl("Western Kenya Markets", position = "topright") %>%
+  addControl('<a href="/Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/ke_market_centers">Data source</a>',
+             position = "bottomleft")
+
+westernKEmarkets_map4
+```
+
+```{r, message = FALSE, results='hide'}
+westernKEmarkets_map5 <- leaflet(park_pts) %>%
+  addProviderTiles(providers$OpenStreetMap) %>%
+  addMarkers(popup = ~describe) %>%
+  addControl("Western Kenya Markets", position = "topright") %>%
+  addControl('<a href="/Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/ke_market_centers">Data source</a>',
+             position = "bottomleft")
+
+westernKEmarkets_map5
+```
+
+```{r, message = FALSE, results='hide'}
+westernKEmarkets_map6 <- leaflet(park_pts) %>%
+  addProviderTiles(providers$Stamen) %>%
+  addCircles(fillColor = "green", color = "green", 
+             stroke = FALSE, radius = 200,
+              highlightOptions = highlightOptions(fillColor = "darkgreen", 
+                                                  fillOpacity = 1),
+              popup = ~describe) %>%
+  addControl("Western Kenya Markets", position = "topright") %>%
+  addControl('<a href="/Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/ke_market_centers">Data source</a>',
+             position = "bottomleft")
+
+westernKEmarkets_map6
+```
+
+```{r, message = FALSE, results='hide'}
+westernKEmarkets_map7 <- leaflet(park_pts) %>%
+  addProviderTiles(providers$Stamen) %>%
+  addCircles(fillColor = "green", color = "green", 
+             stroke = FALSE, radius = ~acres,
+              highlightOptions = highlightOptions(fillColor = "darkgreen", 
+                                                  fillOpacity = 1),
+              popup = ~describe) %>%
+  addControl("Western Kenya Markets", position = "topright") %>%
+  addControl('<a href="/Users/vwanjikungare/Desktop/GitHub/wanjikungare-vis/ke_market_centers">Data source</a>',
+             position = "bottomleft")
+
+westernKEmarkets_map7
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

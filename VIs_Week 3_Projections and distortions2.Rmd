@@ -1,0 +1,350 @@
+---
+title: "Vis_Assignment 2"
+author: "Wanjiku Ngare"
+date: "9/30/2020"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(tidyverse)
+library(ggspatial)
+library(cartogram)
+library(ggthemes)
+```
+
+```{r}
+world <- ne_countries(scale = 50, returnclass = "sf") 
+
+world_map <- ggplot(world) +
+  geom_sf() +
+  theme_bw()
+
+world_map
+```
+
+```{r}
+sa_countries <- world %>%
+  filter(continent == "South America")
+
+sa_map <- ggplot(sa_countries) +
+  geom_sf() + 
+  theme_bw()
+
+sa_map
+```
+
+```{r}
+china_provincies <- ne_states(country = "China", returnclass = "sf")
+
+china_map <- ggplot(china_provincies) +
+  geom_sf() +
+  annotation_scale() +
+  theme_bw()
+
+china_map
+```
+
+```{r}
+india_states <- ne_states(country = "India", returnclass = "sf")
+
+india_map <- ggplot(india_states) +
+  geom_sf() +
+  theme_bw()
+
+india_map
+```
+
+```{r}
+US_states <- ne_states(country = "United States of America", 
+                       returnclass = "sf") %>%
+  filter(name != "Alaska",
+         name != "Hawaii")
+
+US_map <- ggplot(US_states) +
+  geom_sf() +
+  theme_bw()
+
+US_map
+```
+
+#United States
+```{r}
+USA_AEA <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=clrk66 +units=m +no_defs"
+MA_state_plane <- "+proj=lcc +lat_1=41.71666666666667 +lat_2=42.68333333333333 +lat_0=41 +lon_0=-71.5 +x_0=200000 +y_0=750000 +ellps=GRS80 +units=m +no_defs"
+WA_state_plane <- "+proj=lcc +lat_1=47.5 +lat_2=48.73333333333333 +lat_0=47 +lon_0=-120.8333333333333 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs"
+```
+
+```{r}
+ggplot(US_states) +
+  geom_sf() +
+  coord_sf(crs =  WA_state_plane) +
+  theme_bw()
+```
+  
+
+
+
+
+```{r}
+states_transformed <- US_states %>%
+  st_transform(crs = USA_AEA)
+```
+
+```{r}
+ggplot(states_transformed) + 
+  geom_sf() +
+  theme_bw()
+```
+
+#Johns Hopkins University CSSE Covid-19 data, daily reports for September 30, 2020 
+
+```{r}
+covid_us <- read_csv("csse_covid_19_daily_reports_us_09-30-2020.csv")
+
+covid_states <-states_transformed %>%
+  left_join(covid_us, by = c("name" = "Province_State")) %>%
+  mutate(pop = 100000 * Confirmed / Incident_Rate) %>%
+  select(name, pop, Confirmed, Deaths, Recovered, Active)
+```
+
+#Chloropleth map of US Covid-19 data - September 30, 2020 
+```{r}
+ggplot(covid_states, aes(fill = Confirmed)) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(
+    name = "Number of\nconfirmed\nCOVID-19\ncases as of\nSept. 30, 2020",
+    breaks = seq(100000, 500000, by = 100000),
+    labels = formatC(seq(100000, 500000, by = 100000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+  theme_map() +
+  theme(legend.background = element_blank())
+```
+
+#Continuous cartogram of US Covid-19 data - September 30, 2020 
+```{r}
+covid_cartogram_cont <- covid_states %>%
+  cartogram_cont("pop")
+
+ggplot(covid_cartogram_cont, aes(fill = Active)) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(
+    name = "Number of confirmed\nCOVID-19 cases\nas of Sept. 30, 2020",
+    breaks = seq(100000, 500000, by = 100000),
+    labels = formatC(seq(100000, 500000, by = 100000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+  theme_map() +
+  theme(legend.background = element_blank())
+```
+
+#Non-continuous cartogram of US Covid-19 data - September 30, 2020 
+```{r}
+covid_cartogram_ncont <- covid_states %>%
+  cartogram_ncont("pop")
+
+ggplot(covid_cartogram_ncont, aes(fill = Active)) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(
+    name = "Number of\nconfirmed\nCOVID-19 cases\nas of Sept. 30, 2020",
+    breaks = seq(100000, 500000, by = 100000),
+    labels = formatC(seq(100000, 500000, by = 100000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+  theme_map() +
+  theme(legend.background = element_blank())
+```
+
+#Dorling cartogram of US Covid-19 data - September 30, 2020 
+```{r}
+covid_cartogram_dorling <- covid_states %>%
+  cartogram_dorling("pop")
+
+ggplot(covid_cartogram_dorling, aes(fill = Active)) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(
+    name = "Number of confirmed\nCOVID-19 cases\nas of Sept. 30, 2020",
+    breaks = seq(100000, 500000, by = 100000),
+    labels = formatC(seq(100000, 500000, by = 100000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+  theme_map() +
+  theme(legend.background = element_blank())
+```
+#Proportional symbol map of US Covid-19 data - September 30, 2020 
+```{r}
+covid_centeroids <- covid_states %>%
+  st_centroid()
+
+ggplot(states_transformed) +
+  geom_sf(fill = NA, color = "gray") +
+  geom_sf(data = covid_centeroids, 
+          aes(size = Confirmed),
+          alpha = 0.5, color = "red") +
+  scale_size_continuous(name = "Number of confirmed\nCOVID-19 cases as of\nSept. 30, 2020",
+    breaks = seq(100000, 500000, by = 100000),
+    labels = formatC(seq(100000, 500000, by = 100000), 
+                     big.mark = ",", format = "f", digits = 0),
+    range = c(0, 20)) +
+  theme_void() 
+```
+
+
+#Colombia Projection
+#To practice the above tutorial, I decided to focus on incidents of COVID-19 in Colombia.
+#I've chosen to transform the map using the MAGNA-SIRGAS / Colombia Bogota zone projected CRS. It was suggested as an option for small scale mapping of the whole country. Additionally, it was defined by information from:  Instituto Geografico Agustin Codazzi (IGAC) publication "Aspectos prácticos de la adopción del Marco Geocéntrico Nacional de Referencia MAGNA-SIRGAS como datum oficial de Colombia". http://www.igac.gov.co/MAGNAWEB/DocumentosMAGNA.htm. Replaces Bogota 1975 / Colombia Bogota zone (CRS code 21897).
+#Additionally, as opposed to 'states', Colombia's largest administrative units are known as 'departments'. 
+```{r}
+colombia_states <- ne_states(country = "Colombia", returnclass = "sf")
+
+colombia_map <- ggplot(colombia_states) +
+  geom_sf() +
+  theme_bw()
+
+colombia_map
+```
+
+```{r}
+COLOMBIA_SIRGAS <- "+proj=tmerc +lat_0=4.596200416666666 +lon_0=-74.07750791666666 +k=1 +x_0=1000000 +y_0=1000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs" 
+```
+
+
+```{r}
+colombia_transformed <- colombia_states %>%
+  st_transform(crs = COLOMBIA_SIRGAS)
+```
+
+```{r}
+ggplot(colombia_transformed) +
+  geom_sf() +
+  theme_bw()
+```
+
+```{r}
+covid_colombia <- read_csv("csse_covid_19_daily_reports_colombia_09-30-2020.csv")
+
+covid_departments <-colombia_transformed %>%
+  left_join(covid_colombia, by = c("name" = "Province_State")) %>%
+  mutate(pop = 100000 * Confirmed / Incidence_Rate) %>%
+  select(name, pop, Confirmed, Deaths, Recovered, Active)
+```
+
+#Colombia cartogram for Sept. 30, 2020 covid data
+
+#As you will see below, data for some departments is not available and it is unclear to me why that is the case. For a longer project, I would likely reach out to the Ministry of Health in Colombia to request this data, or look for NGO or NPO organizations in public health that may have this data.
+```{r}
+ggplot(covid_departments, aes(fill = Confirmed)) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(
+    name = "Number of\nconfirmed\nCOVID-19\ncases as of\n9.30.2020",
+    breaks = seq(10000, 100000, by = 20000),
+    labels = formatC(seq(10000, 100000, by = 20000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+  theme_map() +
+  theme(legend.background = element_blank())
+```
+
+#Colombia continuous cartogram for Sept. 30, 2020 covid data
+
+```{r}
+covid_cartogram_cont <- covid_departments %>%
+  cartogram_cont("pop")
+
+ggplot(covid_cartogram_cont, aes(fill = Confirmed)) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(
+    name = "Number of confirmed\nCOVID-19 cases\nas of 9.30.2020",
+    breaks = seq(10000, 100000, by = 20000),
+    labels = formatC(seq(10000, 100000, by = 20000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+  theme_map() +
+  theme(legend.position = "left")
+```
+#Colombia non-continuous cartogram for Sept. 30, 2020 covid data
+
+```{r}
+covid_cartogram_ncont <- covid_departments %>%
+  cartogram_ncont("pop")
+
+ggplot(covid_cartogram_ncont, aes(fill = Confirmed)) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(
+    name = "Number of\nconfirmed\nCOVID-19 cases\nas of 9.30.2020",
+    breaks = seq(10000, 100000, by = 20000),
+    labels = formatC(seq(10000, 100000, by = 20000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+  theme_map() +
+ theme(legend.position = "left")
+```
+
+
+
+#Colombia Dorling cartogram for Sept. 30, 2020 covid data
+
+#I removed the dorling cartogram chunk because I kept getting the following error: Error in packcircles::circleRepelLayout(x = dat.init, xysizecols = 1:3, : all sizes are missing and/or non-positive. This was my code:
+#covid_cartogram_dorling <- covid_departments %>%
+#  cartogram_dorling("pop")
+
+#ggplot(covid_cartogram_dorling, aes(fill = Confirmed)) +
+#  geom_sf(color = NA) +
+#  scale_fill_viridis_c(
+#    name = "Number of confirmed\nCOVID-19 cases\nas of August 6, 2020",
+#    breaks = seq(10000, 100000, by = 20000),
+#    labels = formatC(seq(10000, 100000, by = 20000),  
+#                     big.mark = ",", format = "f", digits = 0)) +
+#  theme_map() +
+#  theme(legend.background = element_blank())
+
+
+#Colombia Proportional symbol map for Sept. 30, 2020 covid data
+
+```{r}
+covid_centeroids <- covid_departments %>%
+  st_centroid()
+
+ggplot(colombia_transformed) +
+  geom_sf(fill = NA, color = "gray") +
+  geom_sf(data = covid_centeroids, 
+          aes(size = Confirmed),
+          alpha = 0.5, color = "red") +
+  scale_size_continuous(name = "Number of confirmed\nCOVID-19 cases as of\n9.30.2020",
+    breaks = seq(10000, 100000, by = 20000),
+    labels = formatC(seq(10000, 100000, by = 20000), 
+                     big.mark = ",", format = "f", digits = 0),
+    range = c(0, 20)) +
+  theme_void() 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

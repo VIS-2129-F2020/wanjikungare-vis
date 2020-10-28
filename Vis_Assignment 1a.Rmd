@@ -1,0 +1,310 @@
+---
+title: "Week2"
+author: "Wanjiku Ngare"
+date: "9/18/2020"
+output: html_document
+---
+
+```{r load libraries}
+library(ggplot2)
+library(tidyverse)
+library(tidycensus)
+library(skimr)
+
+```
+
+## Census Tracts in Seattle Washington
+
+Variables
+
+1. Urban or Rural (categorical)
+2. Majority race/ethinicity (categorical)
+3. Average household size (continuous)
+4. The percent of households who live in rented homes (continuous)
+5. The population of the tract (continuous)
+6. The median age of the residents (continuous)
+
+Data retrieved from the 2010 census.
+```{r, message = FALSE}
+vars <- c(tot_hh = "H001001",
+         tot_rural_hh = "H002005",
+         tot_rent_hh = "H004004",
+         avg_hh_size = "H012001",
+         tot_fem_pop = "P012026",
+         nh_white_fem_pop = "P012A001",
+         nh_black_fem_pop = "P012B001",
+         nh_asian_fem_pop = "P012D001",
+         hispanic_fem_pop = "P012H001",
+         med_age_fem = "P013001")
+
+Seattle_tracts <- get_decennial(geography = "tract", variables = vars,
+                           state = "WA", county = "King",
+                           output = "wide") %>%
+  mutate(rural = (tot_rural_hh == tot_hh) ,
+         pct_rental = tot_rent_hh / tot_hh,
+         majority_race_eth_fem = case_when(
+           nh_white_fem_pop / tot_fem_pop > 0.5 ~ "nh_white_fem",
+           nh_black_fem_pop / tot_fem_pop > 0.5 ~ "nh_black_fem",
+           nh_asian_fem_pop / tot_fem_pop > 0.5 ~ "nh_asian_fem",
+           hispanic_fem_pop / tot_fem_pop > 0.5 ~ "hispanic",
+           (nh_white_fem_pop + nh_black_fem_pop + nh_asian_fem_pop + hispanic_fem_pop) /
+             tot_fem_pop < 0.5 ~ "other",
+           TRUE ~ "None")) %>%
+  filter(tot_fem_pop > 0, tot_hh > 0) %>%
+  select(GEOID, rural, majority_race_eth_fem, 
+         pct_rental, avg_hh_size, tot_fem_pop, med_age_fem) 
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = pct_rental,
+           y = med_age_fem,
+           size = tot_fem_pop,
+           shape = rural,
+           color = majority_race_eth_fem,
+           alpha = avg_hh_size)) +
+  geom_point() +
+  scale_size_continuous(name = "Tract female population") +
+  scale_x_continuous(name = "Percent of (female) households in rented homes",
+                     breaks = seq(0, 1, by = 0.2),
+                     labels = paste(seq(0, 100, by = 20), "%", sep = "")) +
+  scale_y_continuous(name = "Median (female) age within tract",
+                     breaks = seq(10, 80, by = 20)) +
+  scale_color_discrete(name = "Majority female race/ethnicity",
+                       labels = c("Hispanic female",
+                                  "Non-Hispanic Asian female",
+                                  "Non-Hispanic white femaile",
+                                  "No majority")) +
+  scale_alpha_continuous(name = "Average household size in tract") +
+  scale_shape(name = element_blank(), 
+              labels = c("Urban tract", "Rural tract")) +
+  theme_bw() +
+  theme(legend.key.size = unit(0.1, "cm"))
+```
+
+```{r} 
+ggplot(Seattle_tracts, 
+       aes(x = pct_rental,
+           y = med_age_fem,
+           color = majority_race_eth_fem)) +
+  geom_point() +
+  scale_x_continuous(name = "Percent of hh with fm mms in rented homes",
+                     breaks = seq(0, 1, by = 0.2),
+                     labels = paste(seq(0, 100, by = 20), "%", sep = "")) +
+  scale_y_continuous(name = "Median age of fm hh mms within tract",
+                     breaks = seq(10, 80, by = 20)) +
+  scale_color_discrete(name = "Majority race/ethn.\nof fm hh members",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic Asian",
+                                  "Non-Hispanic white ",
+                                  "No majority")) +
+  theme(plot.title = element_text(size = 9, face = "bold"),
+    legend.title=element_text(size=10), 
+    axis.title = element_text(size = 9),
+    legend.text=element_text(size=7)) 
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = pct_rental,
+           y = med_age_fem,
+           color = majority_race_eth_fem,
+           fill = majority_race_eth_fem)) +
+  geom_point() +
+  stat_smooth(method = "lm") +
+  scale_x_continuous(name = "Percent of households w/fem\nmms in rented homes",
+                     breaks = seq(0, 1, by = 0.2),
+                     labels = paste(seq(0, 100, by = 20), "%", sep = "")) +
+  scale_y_continuous(name = "Median age of female\nhousehold members within tract",
+                     breaks = seq(10, 80, by = 20)) +
+  scale_color_discrete(name = "Majority race/ethnicity (female)",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic Asian",
+                                  "Non-Hispanic white",
+                                  "No majority")) +
+  scale_fill_discrete(name = "Majority race/ethnicity",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic Asian",
+                                  "Non-Hispanic white",
+                                  "No majority")) +
+  theme(plot.title = element_text(size = 9, face = "bold"),
+    legend.title=element_text(size=10), 
+    axis.title = element_text(size = 9),
+    legend.text=element_text(size=7)) 
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = avg_hh_size,
+           y = tot_fem_pop)) +
+  geom_point() +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Average household size") +
+  scale_y_continuous(name = "Tract population") +
+  theme(axis.title = element_text(size = 10)) 
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = avg_hh_size,
+           y = tot_fem_pop)) +
+  geom_point() +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Average household size") +
+  scale_y_continuous(name = "Tract population",
+                     trans = "log",
+                     breaks = c(10, 100, 1000, 10000),
+                     labels = c("10", "100", "1,000", "10,000")) +
+  theme(axis.title = element_text(size = 10)) 
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = avg_hh_size,
+           y = tot_fem_pop)) +
+  geom_point(alpha = 0.5, size = 0.5) +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Average household size",
+                     labels = c("5 or 1", "1.5", "2", "2.5",
+                                "3", "3.5", "4", "4.5", "5"),
+                     breaks = seq(1, 5, by = 0.5)) +
+  scale_y_continuous(name = "Tract population",
+                     trans = "log",
+                     breaks = c(10, 100, 1000, 10000),
+                     labels = c("10", "100", "1,000", "10,000")) +
+  coord_polar(theta = "x") +
+  theme(axis.title.x = element_text(size=10)) 
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = majority_race_eth_fem,
+           y = med_age_fem)) +
+  geom_point() +
+  scale_x_discrete(name = "Majority race/ethnicity\nof female hh mms",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic Asian",
+                                  "Non-Hispanic white",
+                                  "No majority")) +
+  scale_y_continuous(name = "Median age within tract",
+                     breaks = seq(10, 80, by = 20)) +
+  theme_bw() 
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = majority_race_eth_fem,
+           y = med_age_fem,
+           color = majority_race_eth_fem)) +
+  geom_point(position = "jitter",
+             size = 0.5,
+             alpha = 0.5) +
+  scale_x_discrete(name = "Majority race/ethnicity\nof female hh mms",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic Asian",
+                                  "Non-Hispanic white",
+                                  "No majority")) +
+  scale_y_continuous(name = "Median age of female\nhh members within tract",
+                     breaks = seq(10, 80, by = 10)) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = majority_race_eth_fem,
+           y = med_age_fem,
+           color = majority_race_eth_fem)) +
+  geom_boxplot() +
+  scale_x_discrete(name = "Majority race/ethnicity\nof female hh mms",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic Asian",
+                                  "Non-Hispanic white",
+                                  "No majority")) +
+  scale_y_continuous(name = "Median age of female\nhh members within tract",
+                     breaks = seq(10, 80, by = 10)) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = majority_race_eth_fem,
+           y = med_age_fem,
+           color = majority_race_eth_fem)) +
+  geom_violin() +
+  scale_x_discrete(name = "Majority race/ethnicity\nof female hh mms",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic Asian",
+                                  "Non-Hispanic white",
+                                  "No majority")) +
+  scale_y_continuous(name = "Median age of female\nhh members within tract",
+                     breaks = seq(10, 80, by = 10)) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(Seattle_tracts, 
+       aes(x = majority_race_eth_fem,
+           y = med_age_fem,
+           color = majority_race_eth_fem)) +
+  geom_violin() +
+  geom_point(position = "jitter",
+             alpha = 0.5,
+             size = 0.5) +
+  scale_x_discrete(name = "Majority race/ethnicity\nof female hh mms",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic Asian",
+                                  "Non-Hispanic white",
+                                  "No majority")) +
+  scale_y_continuous(name = "Median age of female\nhh members within tract",
+                     breaks = seq(10, 80, by = 10)) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(Seattle_tracts, aes(x = majority_race_eth_fem, fill = rural)) +
+  geom_bar() +
+  scale_y_continuous(name = "Number of tracts") +
+  scale_x_discrete(name = "Majority race/ethnicity\nof female hh mms",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic\nAsian",
+                                  "Non-Hispanic\nwhite",
+                                  "No majority")) +
+  scale_fill_discrete(name = element_blank(),
+                        labels = c("Urban tracts",
+                                   "Rural tracts")) +
+  theme_bw() 
+```
+
+```{r}
+ggplot(Seattle_tracts, aes(x = majority_race_eth_fem, fill = rural)) +
+  geom_bar(position = "dodge") +
+  scale_y_continuous(name = "Number of tracts") +
+  scale_x_discrete(name = "Majority race/ethnicity\nof female hh mms",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic\nAsian",
+                                  "Non-Hispanic\nwhite",
+                                  "No majority")) +
+  scale_fill_discrete(name = element_blank(),
+                        labels = c("Urban tracts",
+                                   "Rural tracts")) +
+  theme_bw() 
+```
+
+```{r}
+pie_chart <- ggplot(Seattle_tracts, aes(x = 1, fill = majority_race_eth_fem)) +
+  geom_bar(position = "fill") +
+  coord_polar(theta = "y") +
+  scale_y_continuous(name = "Number of tracts") +
+  scale_fill_discrete(name = "Majority race/ethnicity\nof female hh mms",
+                       labels = c("Hispanic",
+                                  "Non-Hispanic\nAsian",
+                                  "Non-Hispanic\nwhite",
+                                  "No majority")) +
+  theme_void() 
+
+pie_chart
+```

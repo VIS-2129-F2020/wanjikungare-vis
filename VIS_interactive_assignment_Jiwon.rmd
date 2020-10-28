@@ -1,0 +1,112 @@
+```{r message = FALSE}
+library(tidyverse)
+library(tidycensus)
+library(ggplot2)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+library(rgdal) 
+library(sp)
+library(stringr)
+library(dplyr)
+library(mapview)
+```
+
+```{r}
+open_space_boston <- st_read("https://bostonopendata-boston.opendata.arcgis.com/datasets/2868d370c55d4d458d4ae2224ef8cddd_7.geojson") 
+open_space_boston_addr <- st_centroid(open_space_boston)
+
+landmark_boston <- st_read("http://bostonopendata-boston.opendata.arcgis.com/datasets/7a7aca614ad740e99b060e0ee787a228_3.geojson")
+landmark_boston_addr <-st_centroid(landmark_boston)
+```
+
+
+```{r}
+area_vars_2018 <- load_variables(2018, "acs5")
+```
+
+```{r}
+med_home_value <- get_acs(geography = "tract",
+                          variables = "B25077_001",
+                          state = "MA",
+                          county = "Suffolk County",
+                          geometry = TRUE) %>%
+
+   filter(!is.na(estimate))
+```
+
+```{r}
+  open_space_boston_addr$describe1 <- 
+  paste("Ownership :", open_space_boston_addr$OWNERSHIP, "<br>") %>%
+  paste("Name :", open_space_boston_addr$SITE_NAME, "<br>") %>%
+  paste("Zoning : ", open_space_boston_addr$ZonAgg, "<br>") %>%
+  paste("Area :", prettyNum(open_space_boston_addr$ACRES, digits=2), " acres",  "<br>") %>%
+  paste("Neighborhood :", open_space_boston_addr$DISTRICT, "<br>") %>%
+  lapply(htmltools::HTML)
+```
+
+
+
+```{r}
+  landmark_boston_addr$describe2 <- 
+  paste("Name :", landmark_boston_addr$Name_of_Pr, "<br>") %>%
+  paste(landmark_boston_addr$URL, "<br>") %>%
+  paste(landmark_boston_addr$Date_Desig) %>%
+  lapply(htmltools::HTML)
+```
+
+
+```{r}
+map1 <- map1 %>%
+  colorNumeric(palette = "viridis", 
+                    domain = med_home_value$estimate) 
+
+my_icons <- makeIcon(iconUrl = "https://image.flaticon.com/icons/png/512/1823/1823644.png",
+                     iconWidth = 7,
+                     iconHeight = 7) 
+
+map1 <- med_home_value %>%
+    st_transform(crs = "+init=epsg:4326") %>%
+    leaflet(width = "100%") %>%
+    addProviderTiles(providers$CartoDB) %>%
+    addPolygons(popup = ~ str_extract(NAME, "^([^,]*)"),
+                stroke = FALSE,
+                smoothFactor = 0,
+                fillOpacity = 0.5,
+                color = ~ pal(estimate),
+                group="Median Home Value") %>%
+    addLegend("bottomright", 
+              pal = pal, 
+              values = ~ estimate,
+              title = "Median Home Value",
+              labFormat = labelFormat(prefix = "$"),
+              opacity = 1) %>%
+  
+  addCircleMarkers(data= open_space_boston_addr, 
+             group="Open Space", 
+             fill = TRUE,
+             radius = 10,
+             color = "green",
+             fillOpacity = 0.5, 
+             stroke = FALSE,
+             label = ~ describe1,
+             clusterOptions = markerClusterOptions()) %>%
+  
+    addMarkers(data = landmark_boston_addr,
+               group = "Landmark",
+               icon = my_icons,
+               label = ~ describe2) %>%
+  
+addLayersControl(overlayGroups = c("Median Home Value", "Open Space", "Landmark")) %>%
+layersControlOptions(collapsed = TRUE, autoZIndex = TRUE)
+
+map1
+
+```
+
+
+```{r}
+saveWidget(map1, file = "map1.html")
+```
+
