@@ -1,0 +1,296 @@
+---
+title: "Vis_Assignment 4"
+author: "Wanjiku Ngare"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(sf)
+library(tidyverse)
+library(ggthemes)
+library(ggspatial)
+library(units)
+library(nngeo)
+```
+
+##Why Map fire alarm boxes and fire hydrants in Boston?
+
+According to a recent (February 2020) Boston Globe article, Boston's fire alarm system was the first of its kind in the world, and received its first call 168 years ago. It was an electrical fire alarm telegraph system invented by Samuel F.B. Morse and Dr. William F. Channing. The system is still functional today with over 1800 boxes around the city of Boston and over 9000 calls received through the system - according to the Boston Globe. While we can all make calls using our phones, this system can still be handy - for example, during a network outtage. Out of curiousity, I've mapped the fire alarm boxes relative to fire hydrants below. 
+
+```{r, echo=FALSE}
+nhoods <- st_read("http://bostonopendata-boston.opendata.arcgis.com/datasets/3525b0ee6e6b427f9aab5d0a1d0a1a28_0.kml", 
+                  quiet = TRUE) 
+
+water <- st_read("http://bostonopendata-boston.opendata.arcgis.com/datasets/2b3c0fa13b1c468eb702a3645fcc6bcb_5.kml", 
+                 quiet = TRUE)
+
+alarm <- st_read("http://bostonopendata-boston.opendata.arcgis.com/datasets/3a0f4db1e63a4a98a456fdb71dc37a81_1.kml", 
+                   quiet = TRUE) 
+
+hydrants <- st_read("https://bostonopendata-boston.opendata.arcgis.com/datasets/1b0717d5b4654882ae36adc4a20fd64b_0.kml", 
+                 quiet = TRUE) 
+```
+
+```{r, echo=FALSE}
+MA_state_plane <- "+proj=lcc +lat_1=41.71666666666667 +lat_2=42.68333333333333 +lat_0=41 +lon_0=-71.5 +x_0=200000 +y_0=750000 +ellps=GRS80 +units=m +no_defs"
+
+nhoods <- nhoods %>%
+  st_transform(MA_state_plane)
+
+water <- water %>%
+  st_transform(MA_state_plane)
+
+alarm <- alarm %>%
+  st_transform(MA_state_plane)
+
+hydrants <- hydrants %>%
+  st_transform(MA_state_plane)
+```
+
+# Fire hydrants and alarm boxes in Boston
+
+```{r, echo=FALSE}
+ggplot(water) +
+  geom_sf(fill = "lightblue", color = NA) +
+  geom_sf(data = hydrants, color = "lightgreen", size = 0.01) +
+  geom_sf(data = alarm, size = 0.01) +
+  geom_sf(data= nhoods, fill = NA, color = "gray") +
+  theme_map() +
+  annotation_scale()
+```
+# Buffer of 30 meters for fire alarm boxes in Boston
+
+```{r}
+alarm_buffer <- st_buffer(alarm, dist = 30) %>%
+  st_union()
+
+ggplot(alarm_buffer) +
+  geom_sf() +
+  theme_map()
+```
+#Subsetting the fire alarm box and hydrant points with a polygon
+
+```{r, echo=FALSE}
+hydrants_alarm <- hydrants[alarm_buffer,]
+  
+ggplot(alarm_buffer) +
+  geom_sf() +
+  geom_sf(data = hydrants_alarm, 
+          color = "lightgreen", 
+          size = 0.01) +
+  theme_map()
+```
+
+```{r, echo=FALSE}
+hydrants <- hydrants %>%
+  st_join(hydrants_alarm) %>%
+  mutate(by_alarm = !is.na(Name.y))
+```
+
+```{r, echo=FALSE}
+n_alarm_hydrants <- sum(hydrants$by_alarm)
+
+n_alarm_hydrants
+```
+```{r, echo=FALSE}
+n_hydrants <- length(hydrants$by_alarm)
+
+pct_alarm_hydrants <- n_alarm_hydrants / n_hydrants
+
+pct_alarm_hydrants
+```
+
+# Fire hydrants within 30 meters of fire alarm boxes in Boston
+
+```{r, echo=FALSE}
+left_side  <- st_bbox(hydrants)$xmin
+top_side <- st_bbox(hydrants)$ymax
+
+ggplot(water) +
+  geom_sf(fill = "lightblue", color = NA) +
+  geom_sf(data = hydrants, size = 0.01,
+          aes(color = by_alarm)) +
+  scale_color_manual(values = c("lightgreen", "darkgreen"),
+          name = "Boston Hydrants\nby distance to a fire alarm box", 
+          labels = c("No alarm meter within 30 m",
+                     "alarm meter within 30 m")) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  annotate(geom = "text", x = left_side, 
+           y = top_side, 
+           label = paste("Of the ", 
+                         prettyNum(n_hydrants, big.mark = ","),
+                         " hydrants in Boston\n", 
+                         prettyNum(n_alarm_hydrants, big.mark = ","),
+                         " (", 
+                         prettyNum(100*pct_alarm_hydrants, digits = 0),
+                         "%) are within 30\nmeters of a fire alarm box.",
+                         sep = ""),
+           hjust = 0, vjust = 0, size = 3) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+# Choropleth map of number of fire hydrants by Boston neighborhood
+
+```{r, echo=FALSE}
+nhoods <- nhoods %>%
+  mutate(num_hydrants = lengths(st_covers(nhoods, hydrants)))
+
+ggplot(nhoods) +
+  geom_sf(color = NA, 
+          aes(fill = num_hydrants)) +
+  scale_fill_viridis_c(name = "Boston neighborhoods\nby number of hydrants",
+                       breaks = breaks <- seq(0, 15000, by = 5000),
+                       labels = paste(prettyNum(breaks, big.mark = ","),
+                                      "hydrants")) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+theme_map() +
+  theme(legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+# Density of fire hydrants by Boston neighborhood
+
+```{r, echo=FALSE}
+nhoods <- nhoods %>%
+  mutate(area = set_units(st_area(nhoods), km^2)) %>%
+  mutate(hydrant_dens = as.numeric(num_hydrants / area))
+
+ggplot(nhoods) +
+  geom_sf(color = NA, 
+          aes(fill = hydrant_dens)) +
+    scale_fill_viridis_c(name = 
+                           "Boston neighborhoods\nby hydrant density",
+                       breaks = breaks <- seq(0, 500, by = 100),
+                       labels = paste(prettyNum(breaks, big.mark = ","),
+                                      "hydrants per square km")) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+theme_map() +
+  theme(legend.position = "right",
+    legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+#Finding the closest point
+
+```{r, echo=FALSE}
+alarm <- alarm %>%
+  mutate(hydrant_dist = st_nn(alarm, hydrants, 
+                           returnDist = TRUE)$dist) %>%
+  mutate(hydrant_dist = as.numeric(hydrant_dist))
+```
+```{r, echo=FALSE}
+avg_hydrant_dist <- mean(alarm$hydrant_dist)
+
+avg_hydrant_dist
+```
+
+# Boston fire alarm box distance to hydrants
+
+```{r, echo=FALSE}
+right_side <- st_bbox(alarm)$xmax
+left_side  <- st_bbox(alarm)$xmin
+top_side <- st_bbox(alarm)$ymax
+bottom_side <- st_bbox(alarm)$ymin
+
+
+ggplot(water) +
+  geom_sf(fill = "lightblue", color = NA) +
+  geom_sf(data = alarm, size = 0.1,
+          aes(color = hydrant_dist)) +
+  coord_sf(xlim = c(left_side, right_side), 
+           ylim = c(bottom_side, top_side), expand = FALSE) +
+  scale_color_viridis_c(name = 
+                          "Boston fire alarm boxes \nby distance to a hydrant") +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  annotate(geom = "text", x = left_side + 100, 
+           y = top_side - 550, 
+           label = paste("On average, a Boston fire alarm box \nis ", 
+                         prettyNum(avg_hydrant_dist, digits = 3),
+                         " meters from a hydrant.",
+                         sep = ""),
+           hjust = 0, vjust = 0, size = 3) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+#Identifying overlapping polygons
+
+```{r, echo=FALSE}
+nhoods <- nhoods %>%
+  mutate(num_water = lengths(st_overlaps(nhoods, water))) %>%
+  mutate(has_water = num_water > 0)
+```
+
+
+```{r, echo=FALSE}
+n_water_nhoods <- sum(nhoods$has_water)
+
+n_water_nhoods
+```
+
+```{r, echo=FALSE}
+left_side  <- st_bbox(water)$xmin
+top_side <- st_bbox(water)$ymax
+
+ggplot(water) +
+  geom_sf(fill = "lightblue", color = NA) +
+  geom_sf(data = nhoods,
+          aes(fill = has_water)) +
+  scale_fill_manual(values = c("cornsilk1", "darkseagreen1"),
+          name = "Boston Neighborhoods\nby presence of a body of water", 
+          labels = c("Neighborhood without\nan overlapping body of water",
+                     "Neighborhood with an\noverlapping body of water")) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  annotate(geom = "text", x = left_side, 
+           y = top_side - 1000, 
+           label = paste(n_water_nhoods ,
+                         "of Boston's", 
+                         length(nhoods$Name),
+                         "neighborhoods contain\nor overlap with", 
+                         "a body of water."),
+           hjust = 0, vjust = 0, size = 3) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "gray"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
