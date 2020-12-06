@@ -31,7 +31,7 @@ leaflet(boston_nhoods) %>%
 
 ## Total number of people tested for coronavirus by neigbhorhood in Boston
 
-The data about number of people tested for COVID by neighborhood came from the Boston Public Health Commission. While it was subdivided by neighborhood, some neighborhoods were missing and others were combined. There was no data for Longwood and Harbor Island - likely because they don't have many residents. Data for West Roxbury was included in the data for Roslindale. Brighton was included in Allston; Beacon Hill, West End, North End, Bay Village, and Downtown (which includes Chinatown and Leather District) were included in Back Bay; and South Boston Waterfront was included in South Boston. Where the number tested is indicated as 1, the neighborhood's data was merged with an adjacent neighborhood described above. 
+The data for number of people tested for COVID-19 by neighborhood came from the Boston Public Health Commission. While it was subdivided by neighborhood, some neighborhoods were missing and others were combined. There was no data for Longwood and Harbor Island - likely because they don't have many residents. Data for West Roxbury was included in the data for Roslindale. Brighton was included in Allston; Beacon Hill, West End, North End, Bay Village, and Downtown (which includes Chinatown and Leather District) were included in Back Bay; and South Boston Waterfront was included in South Boston. Where the number tested is indicated as 1, the neighborhood's data was merged with an adjacent neighborhood described above. 
 
 ```{r, echo=FALSE}
 boston_nhoods <- boston_nhoods %>%
