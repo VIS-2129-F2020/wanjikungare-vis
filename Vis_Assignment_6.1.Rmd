@@ -189,7 +189,7 @@ NairobiMatatuRoutes_map1 <- leaflet(NairobiMatatuRoutes, options = leafletOption
 NairobiMatatuRoutes_map1
 ```
 
-``````{r}
+```{r, echo=FALSE}
 saveWidget(NairobiMatatuRoutes_map1, file = "NairobiMatatuRoutes.html")
 ```
 
